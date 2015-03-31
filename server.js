@@ -40,7 +40,8 @@ require('./src/app/routes/firstRoutes.js')(app, passport);
 
 
 if (!module.parent) {
-  app.listen(3000);app.listen(config.app.port);
-  console.log('Server started, listening on port: ' + config.port);
+    app.listen(3000);
+    app.listen(config.app.port);
+    console.log('Server started, listening on port: ' + config.port);
 }
 console.log('Environment: ' + config.app.env);
