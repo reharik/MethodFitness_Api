@@ -48,6 +48,15 @@ exports.createUser = function *() {
 
   try {
     var user = new User(body);
+
+
+    var existingClient = User.findOne({ 'email': user.email }).exec();
+    if(existingClient){
+        this.status = 400;
+        this.body ='User with email: '+user.email+' already exists.';
+        return;
+    }
+
     user = yield user.save();
     yield this.login(user);
   } catch (err) {
