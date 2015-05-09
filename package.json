@@ -21,7 +21,8 @@
   "dependencies": {
     "JSON": "^1.0.0",
     "bcrypt": "0.8.x",
-    "co": "4.4.x",
+    "bluebird": "^2.9.24",
+    "co": "^4.4.0",
     "co-body": "^1.0.0",
     "co-views": "0.3.x",
     "curlrequest": "~0.5.1",

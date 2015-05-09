@@ -1,75 +1,77 @@
 /**
  * Created by Owner on 1/18/15.
  */
-//var ges = require('ges-client')
-//
-//module.exports = ges();
 
+var co = require('co');
+var Promise = require('blueBird');
+var ges = require('ges-client');
+var uuid = require('node-uuid');
+var gesEvent = require('../GES/eventData.js');
 
-var ges = require('ges-client'),
-    uuid = require('node-uuid'),
-    gesEvent = require('../GES/eventData.js')
-    , queue = []
-    , connection;
+// this is not working it's returning an object and fucking everything up.
+Promise.promisifyAll(ges);
 
-
-var getConnection = function (cb) {
-    queue.push(cb);
-    if(!connection) {
-        connection = ges({ tcpPort: 1113 },function(err, con) {
-            if(err) {
-                queue.forEach(function(queuedCallback) {
-                    queuedCallback(err)
-                });
-            } else {
-                connection = con
-            }
-            queue.forEach(function(queuedCallback) {
-                queuedCallback(null, connection)
-            })
-        })
-    }else{
-        queue.forEach(function(queuedCallback) {
-            console.log("made it here4");
-            queuedCallback(null, connection)
-        })
-    }
-};
-
-var submitCommandAwaitResult = function (vent, cmdName, cb){
-    var metadata = {
-        'CommitId': uuid.v1(),
-        'CommandTypeName':cmdName,
-        'ContinuationId':uuid.v1()
-    };
-    var appendData = {
-        expectedVersion: -2,
-        events: [new gesEvent(uuid.v1(), metadata.CommandTypeName, true, vent, metadata)]
-    }
-
-    getConnection(function(err,conn){
-        if(err){ return cb(err); }
-
-        conn.appendToStream('CommandDispatch', appendData, function(err, appendResult) {
-            if(err){ return cb(err); }
-        });
-        console.log("ContinuationId: "+metadata.ContinuationId);
-        var responseReceived = false;
-        var subscription = conn.subscribeToStream('UIResponse');
-        subscription.on('event', function(evt) {
-            var meta = JSON.parse(evt.Event.Metadata.toString());
-            if(meta.ContinuationId !== metadata.ContinuationId){ return; }
-            responseReceived=true;
-            var data = JSON.parse(evt.Event.Data.toString());
-            this.unsubscribe();
-            if(data.Message==='Success'){
-                cb(null,data.Message);
-            }else{
-                cb(data.Message);
-            }
-        });
+var promisifyDispatch = function(connection, data){
+  return new Promise(function(resolve,reject){
+    connection.appendToStream('CommandDispatch', data, function(err, result) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(result);
+      }
     });
+  });
 };
 
+var promisifyConnection = function(options){
+  return new Promise(function(resolve, reject){
+    ges(options,function(err, con) {
+      if(err){
+        reject(err);
+      }else{
+        resolve(con);
+      }
+    });
+  })
+};
+
+var promisifySubscription = function(subscription, continuationId){
+  return new Promise(function(resolve,reject){
+    subscription.on('event', function(evt) {
+      var meta = JSON.parse(evt.Event.Metadata.toString());
+      if (meta.ContinuationId !== continuationId) {
+        return;
+      }
+      var data = JSON.parse(evt.Event.Data.toString());
+      if (data.Message === 'Success') {
+        resolve(data.Message);
+      } else {
+        reject(data.Message);
+      }
+    });
+  });
+};
+
+var submitCommandAwaitResult = function (vent, cmdName) {
+  var metadata = {
+    'CommitId': uuid.v1(),
+    'CommandTypeName':cmdName,
+    'ContinuationId':uuid.v1()
+  };
+  var appendData = {
+    expectedVersion: -2,
+    events: [new gesEvent(uuid.v1(), metadata.CommandTypeName, true, vent, metadata)]
+  };
+
+  return function *() {
+    var connection = yield promisifyConnection({ tcpPort: 1113 });
+    yield promisifyDispatch(connection, appendData);
+    var subscription = connection.subscribeToStream('UIResponse');
+
+    var result = yield promisifySubscription(subscription,metadata.ContinuationId);
+    subscription.unsubscribe();
+    return result;
+  };
+};
 
 module.exports = submitCommandAwaitResult;
