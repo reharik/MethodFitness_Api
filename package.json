@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "JSON": "^1.0.0",
-    "bcrypt": "0.8.x",
     "bluebird": "^2.9.24",
     "co": "^4.4.0",
     "co-body": "^1.0.0",
@@ -39,7 +38,7 @@
     "koa-router": "4.1.x",
     "koa-static": "1.4.x",
     "lodash": "~2.4.1",
-    "mongoose": "3.9.x",
+    "mongoose": "4.0.x",
     "mongoose-uuid": "0.0.2",
     "node-uuid": "^1.4.1",
     "passport-local": "1.0.x",
