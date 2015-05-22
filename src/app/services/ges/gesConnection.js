@@ -7,6 +7,7 @@ var Promise = require('blueBird');
 var ges = require('ges-client');
 var uuid = require('node-uuid');
 var gesEvent = require('../GES/eventData.js');
+var config = require('../../../../../config/config');
 
 // this is not working it's returning an object and fucking everything up.
 Promise.promisifyAll(ges);
@@ -64,7 +65,7 @@ var submitCommandAwaitResult = function (vent, cmdName) {
   };
 
   return function *() {
-    var connection = yield promisifyConnection({ tcpPort: 1113 });
+    var connection = yield promisifyConnection({ip:config.eventstore.ip, tcpPort: 1113 });
     yield promisifyDispatch(connection, appendData);
     var subscription = connection.subscribeToStream('UIResponse');
 
